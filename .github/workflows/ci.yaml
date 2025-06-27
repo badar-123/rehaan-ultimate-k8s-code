@@ -100,7 +100,7 @@ jobs:
             git config --global user.email "devopsrehaan@gmail.com"
             git config --global user.name "devopsrehaan@gmail.com"
             git add kubernetes/recommendation/deploy.yaml
-            git commit -m "[CI]: Update recommendation image tag"
+            git commit -m "[CI]: Update recommendation microservice image tag"
             git push origin HEAD:main -f
 
         
