@@ -33,7 +33,7 @@ jobs:
         
         - name: unit tests
           run: |
-            pytest tests/
+            pytest test/
 
         - name: Build package
           run: |
