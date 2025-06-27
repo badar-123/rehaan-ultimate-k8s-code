@@ -1,6 +1,6 @@
 # CI for Product Catalog Service
 
-name: product-catalog-ci
+name: recommendation-ci
 
 on: 
     pull_request:
@@ -15,20 +15,22 @@ jobs:
         - name: checkout code
           uses: actions/checkout@v4
 
-        - name: Setup Go 1.22
-          uses: actions/setup-go@v2
+        - name: Setup Python
+          uses: actions/setup-python@v5
           with:
-            go-version: 1.22
+            go-version: '3.x'
+
+        - name: Install dependencies
+          run: python -m pip install --upgrade pip setuptools wheel
         
         - name: Build
           run: |
-            cd src/product-catalog
-            go mod download
-            go build -o product-catalog-service main.go
+            cd src/recommendation
+            pip install recommendation_server.py
 
         - name: unit tests
           run: |
-            cd src/product-catalog
+            cd src/recommendation
             go test ./...
     
     code-quality:
@@ -38,17 +40,18 @@ jobs:
         - name: checkout code
           uses: actions/checkout@v4
         
-        - name: Setup Go 1.22
-          uses: actions/setup-go@v2
+        - name: Setup Python
+          uses: actions/setup-python@v5
           with:
-           go-version: 1.22
+            go-version: '3.x'
         
-        - name: Run golangci-lint
-          uses: golangci/golangci-lint-action@v6
-          with:
-            version: v1.55.2
-            run: golangci-lint run
-            working-directory: src/product-catalog
+        - name: Install the code linting and formatting tool Ruff
+          run: pipx install ruff
+        - name: Lint code with Ruff
+          run: ruff check --output-format=github --target-version=py39
+        - name: Check code formatting with Ruff
+          run: ruff format --diff --target-version=py39
+          continue-on-error: true
 
     docker:
         runs-on: ubuntu-latest
@@ -71,10 +74,10 @@ jobs:
         - name: Docker Push
           uses: docker/build-push-action@v6
           with:
-            context: src/product-catalog
-            file: src/product-catalog/Dockerfile
+            context: src/recommendation
+            file: src/recommendation/Dockerfile
             push: true
-            tags: ${{ secrets.DOCKER_USERNAME }}/product-catalog:${{github.run_id}}
+            tags: ${{ secrets.DOCKER_USERNAME }}/recommendation:${{github.run_id}}
 
     
     updatek8s:
@@ -90,14 +93,14 @@ jobs:
 
         - name: Update tag in kubernetes deployment manifest
           run: | 
-               sed -i "s|image: .*|image: ${{ secrets.DOCKER_USERNAME }}/product-catalog:${{github.run_id}}|" kubernetes/productcatalog/deploy.yaml
+               sed -i "s|image: .*|image: ${{ secrets.DOCKER_USERNAME }}/recommendation:${{github.run_id}}|" kubernetes/recommendation/deploy.yaml
         
         - name: Commit and push changes
           run: |
-            git config --global user.email "abhishek@gmail.com"
-            git config --global user.name "Abhishek Veeramalla"
-            git add kubernetes/productcatalog/deploy.yaml
-            git commit -m "[CI]: Update product catalog image tag"
+            git config --global user.email "devopsrehaan@gmail.com"
+            git config --global user.name "devopsrehaan@gmail.com"
+            git add kubernetes/recommendation/deploy.yaml
+            git commit -m "[CI]: Update recommendation image tag"
             git push origin HEAD:main -f
 
         
