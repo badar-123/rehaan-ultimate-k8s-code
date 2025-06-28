@@ -1,6 +1,138 @@
-# CI for Product Catalog Service
+# # CI for Product Catalog Service
 
-name: recommendation-ci
+# name: recommendation-ci
+
+# on: 
+#     pull_request:
+#         branches:
+#         - main
+
+# jobs:
+#     build:
+#         runs-on: ubuntu-latest
+
+#         env:
+#           OTEL_SERVICE_NAME: recommendation-service
+#           RECOMMENDATION_PORT: 1010
+#           PRODUCT_CATALOG_ADDR: localhost:5000
+          
+#           # OTEL_SERVICE_NAME: ${{ secrets.OTEL_SERVICE_NAME }}
+#           # RECOMMENDATION_PORT: ${{ secrets.RECOMMENDATION_PORT }}
+#           # PRODUCT_CATALOG_ADDR: ${{ secrets.PRODUCT_CATALOG_ADDR }}
+        
+#         steps:
+#         - name: checkout code
+#           uses: actions/checkout@v4
+
+#         - name: Setup Python
+#           uses: actions/setup-python@v5
+#           with:
+#             go-version: '3.10'
+
+#         - name: Install dependencies
+#           run: |
+#             cd src/recommendation
+#             python -m pip install --upgrade pip
+#             pip install -r requirements.txt
+
+#         - name: Install test dependencies
+#           run: |
+#             python -m pip install --upgrade pip
+#             pip install pytest flake8 black
+        
+#         # - name: unit tests
+#         #   run: |
+#         #     pytest test/
+
+#         - name: Build package
+#           run: |
+#             python ./src/recommendation/recommendation_server.py
+    
+#     code-quality:
+#         runs-on: ubuntu-latest
+
+#         steps:
+#         - name: checkout code
+#           uses: actions/checkout@v4
+        
+#         - name: Setup Python
+#           uses: actions/setup-python@v5
+#           with:
+#             go-version: '3.10'
+        
+#         - name: Install test dependencies
+#           run: |
+#             python -m pip install --upgrade pip
+#             pip install flake8 black
+
+#         - name: Format code using black
+#           run: black .
+
+
+#         - name: Format code using flake8
+#           run: flake8 .
+
+#         # - name: Run Lint checks
+#         #   run: |
+#         #     pip install flake8
+#         #     flake8 .
+
+
+#     docker:
+#         runs-on: ubuntu-latest
+
+#         needs: build
+
+#         steps:
+#         - name: checkout code
+#           uses: actions/checkout@v4
+
+#         - name: Install Docker
+#           uses: docker/setup-buildx-action@v1
+        
+#         - name: Login to Docker
+#           uses: docker/login-action@v3
+#           with:
+#             username: ${{ secrets.DOCKER_USERNAME }}
+#             password: ${{ secrets.DOCKER_TOKEN }}
+
+#         - name: Docker Push
+#           uses: docker/build-push-action@v6
+#           with:
+#             context: src/recommendation
+#             file: src/recommendation/Dockerfile
+#             push: true
+#             tags: ${{ secrets.DOCKER_USERNAME }}/recommendation:${{github.run_id}}
+
+    
+#     updatek8s:
+#         runs-on: ubuntu-latest
+
+#         needs: [build, code-quality, docker]
+
+#         steps:
+#         - name: checkout code
+#           uses: actions/checkout@v4
+#           with:
+#             token: ${{ secrets.GITHUB_TOKEN }}
+
+#         - name: Update tag in kubernetes deployment manifest
+#           run: | 
+#                sed -i "s|image: .*|image: ${{ secrets.DOCKER_USERNAME }}/recommendation:${{github.run_id}}|" kubernetes/recommendation/deploy.yaml
+        
+#         - name: Commit and push changes
+#           run: |
+#             git config --global user.email "devopsrehaan@gmail.com"
+#             git config --global user.name "devopsrehaan@gmail.com"
+#             git add kubernetes/recommendation/deploy.yaml
+#             git commit -m "[CI]: Update recommendation  image  tag"
+#             git push origin HEAD:main -f
+
+        
+        
+          # CI for Product Catalog Service
+
+name: product-catalog-ci
 
 on: 
     pull_request:
@@ -11,42 +143,25 @@ jobs:
     build:
         runs-on: ubuntu-latest
 
-        env:
-          OTEL_SERVICE_NAME: recommendation-service
-          RECOMMENDATION_PORT: 1010
-          PRODUCT_CATALOG_ADDR: localhost:5000
-          
-          # OTEL_SERVICE_NAME: ${{ secrets.OTEL_SERVICE_NAME }}
-          # RECOMMENDATION_PORT: ${{ secrets.RECOMMENDATION_PORT }}
-          # PRODUCT_CATALOG_ADDR: ${{ secrets.PRODUCT_CATALOG_ADDR }}
-        
         steps:
         - name: checkout code
           uses: actions/checkout@v4
 
-        - name: Setup Python
-          uses: actions/setup-python@v5
+        - name: Setup Go 1.22
+          uses: actions/setup-go@v2
           with:
-            go-version: '3.10'
-
-        - name: Install dependencies
-          run: |
-            cd src/recommendation
-            python -m pip install --upgrade pip
-            pip install -r requirements.txt
-
-        - name: Install test dependencies
-          run: |
-            python -m pip install --upgrade pip
-            pip install pytest flake8 black
+            go-version: 1.22
         
-        # - name: unit tests
-        #   run: |
-        #     pytest test/
-
-        - name: Build package
+        - name: Build
           run: |
-            python ./src/recommendation/recommendation_server.py
+            cd src/product-catalog
+            go mod download
+            go build -o product-catalog-service main.go
+
+        - name: unit tests
+          run: |
+            cd src/product-catalog
+            go test ./...
     
     code-quality:
         runs-on: ubuntu-latest
@@ -55,28 +170,17 @@ jobs:
         - name: checkout code
           uses: actions/checkout@v4
         
-        - name: Setup Python
-          uses: actions/setup-python@v5
+        - name: Setup Go 1.22
+          uses: actions/setup-go@v2
           with:
-            go-version: '3.10'
+           go-version: 1.22
         
-        - name: Install test dependencies
-          run: |
-            python -m pip install --upgrade pip
-            pip install flake8 black
-
-        - name: Format code using black
-          run: black .
-
-
-        - name: Format code using flake8
-          run: flake8 .
-
-        # - name: Run Lint checks
-        #   run: |
-        #     pip install flake8
-        #     flake8 .
-
+        - name: Run golangci-lint
+          uses: golangci/golangci-lint-action@v6
+          with:
+            version: v1.55.2
+            run: golangci-lint run
+            working-directory: src/product-catalog
 
     docker:
         runs-on: ubuntu-latest
@@ -99,10 +203,10 @@ jobs:
         - name: Docker Push
           uses: docker/build-push-action@v6
           with:
-            context: src/recommendation
-            file: src/recommendation/Dockerfile
+            context: src/product-catalog
+            file: src/product-catalog/Dockerfile
             push: true
-            tags: ${{ secrets.DOCKER_USERNAME }}/recommendation:${{github.run_id}}
+            tags: ${{ secrets.DOCKER_USERNAME }}/product-catalog:${{github.run_id}}
 
     
     updatek8s:
@@ -118,14 +222,14 @@ jobs:
 
         - name: Update tag in kubernetes deployment manifest
           run: | 
-               sed -i "s|image: .*|image: ${{ secrets.DOCKER_USERNAME }}/recommendation:${{github.run_id}}|" kubernetes/recommendation/deploy.yaml
+               sed -i "s|image: .*|image: ${{ secrets.DOCKER_USERNAME }}/product-catalog:${{github.run_id}}|" kubernetes/productcatalog/deploy.yaml
         
         - name: Commit and push changes
           run: |
             git config --global user.email "devopsrehaan@gmail.com"
-            git config --global user.name "devopsrehaan@gmail.com"
-            git add kubernetes/recommendation/deploy.yaml
-            git commit -m "[CI]: Update recommendation  image  tag"
+            git config --global user.name "badar-123"
+            git add kubernetes/productcatalog/deploy.yaml
+            git commit -m "[CI]: Update product catalog image tag"
             git push origin HEAD:main -f
 
         
