@@ -11,6 +11,9 @@ jobs:
     build:
         runs-on: ubuntu-latest
 
+        env:
+          OTEL_SERVICE_NAME: recommendation-service
+        
         steps:
         - name: checkout code
           uses: actions/checkout@v4
