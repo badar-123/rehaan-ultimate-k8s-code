@@ -13,6 +13,12 @@ jobs:
 
         env:
           OTEL_SERVICE_NAME: recommendation-service
+          RECOMMENDATION_PORT: 1010
+          PRODUCT_CATALOG_ADDR: localhost:5000
+          
+          # OTEL_SERVICE_NAME: ${{ secrets.OTEL_SERVICE_NAME }}
+          # RECOMMENDATION_PORT: ${{ secrets.RECOMMENDATION_PORT }}
+          # PRODUCT_CATALOG_ADDR: ${{ secrets.PRODUCT_CATALOG_ADDR }}
         
         steps:
         - name: checkout code
